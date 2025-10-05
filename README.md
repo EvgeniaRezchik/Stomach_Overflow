@@ -9,12 +9,12 @@ This is the project created during the education in NTU "KhPI" according to the 
 ### Creating a post
 ![Creating a post](./public/images/creatingPost.png "Creating a post")
 ## How to download
-**You will need:**
+### You will need:
 * Node.js
 * npm
 * MySQL
 * Postman (to handle routes without the frontend)
-**Uploading**
+### Uploading
 1. Download all dependencies:
 ```bash
 npm install
