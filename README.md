@@ -1,7 +1,13 @@
 # Innovation Campus USOF
 ## About the app
 This is the project created during the education in NTU "KhPI" according to the Innovation Campus program. USOF is a forum where you can publish posts and comment them (my forum is called **Stomach Overflow** and users of my app can discuss everything about cooking).
-![Registering a new user](./public/images/register.png "Registering a new user")
+## Screenshot of the app in use
+### Registering a new user
+![Registering a new user](./public/images/register.png "Registering")
+### Uploading an avatar
+![Uploading an avatar](./public/images/uploadingAvatar.png "Uploading an avatar")
+### Creating a post
+![Creating a post](./public/images/creatingPost.png "Creating a post")
 ## How to download
 **You will need:**
 * Node.js
@@ -40,4 +46,5 @@ node index.js
 3. Paste the link in Postman (because there is no frontend yet).
 ## Documentation for the project:
 For the information about the usage of the app read the [Official Stomach Overflow Documentation](https://docs.google.com/document/d/1VTtelaNjCpbmt7tRmX8bE_2_yzD21DtBtSzT29xfu8s/edit?usp=sharing).
-**P.S.** All existent or similar to existent names and characters are used *only for educational purposes*!
+## P.S.
+All existent or similar to existent names and characters are used *only for educational purposes*!
