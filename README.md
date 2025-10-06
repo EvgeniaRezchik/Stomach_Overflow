@@ -21,12 +21,12 @@ npm install
 ```
 2. Download the database:
 ```bash
-mysql -u root -p < db.sql
+mysql -u root < db.sql
 ```
 3. After downloading the database, correct some data:
   * Run MySQL:
 ```bash
-mysql -u root -p
+mysql -u root
 ```
   * Write other e-mail addresses to users (pre-built addresses are not existent; there is mailing of letters in the app, so users must have real e-mail address):
 ```sql

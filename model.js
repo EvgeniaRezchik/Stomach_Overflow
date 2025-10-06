@@ -18,7 +18,8 @@ module.exports = class Model {
     });
   }
   static findAll(values, columns, params, orderBy, order,
-	         limit, offset, joinTables, joinColumns1, joinColumns2) {
+	         limit, offset, joinTables,
+	         joinColumns1, joinColumns2) {
     let query = `SELECT ${this.table}.* FROM ` + this.table;
     if (joinTables && joinColumns1 && joinColumns2) {
       if (joinTables instanceof Array
