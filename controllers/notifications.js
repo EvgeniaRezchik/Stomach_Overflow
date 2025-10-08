@@ -18,8 +18,7 @@ const controller = {
         } else
           res.status(401).json({message: "Your token seems to have expired"});
       } catch(err) {
-        console.log(err);
-        res.status(401).json({message: "Your token seems to have expired"});
+        res.status(500).json({message: err.message});
       }
     } else
       res.status(401).json({message: "You are not authorized!"});
@@ -54,8 +53,7 @@ const controller = {
         } else
           res.status(401).json({message: "Your token seems to have expired"});
       } catch(err) {
-        console.log(err);
-        res.status(401).json({message: "Your token seems to have expired"});
+        res.status(500).json({message: err.message});
       }
     } else
       res.status(401).json({message: "You are not authorized!"});
@@ -91,8 +89,7 @@ const controller = {
         } else
           res.status(401).json({message: "Your token seems to have expired"});
       } catch(err) {
-        console.log(err);
-        res.status(401).json({message: "Your token seems to have expired"});
+        res.status(500).json({message: err.message});
       }
     } else
       res.status(401).json({message: "You are not authorized!"});

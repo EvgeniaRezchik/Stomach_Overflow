@@ -34,6 +34,7 @@ router.patch("/:comment_id/photo", (req, res, next) => {
     return err ? res.status(400).json({message: err.message}):next();
   });
 }, controller.attachPhoto);
+router.patch("/:comment_id/lock", controller.lockComment);
 router.delete("/:comment_id", controller.deleteComment);
 router.delete("/:comment_id/like", controller.deleteLike);
 router.delete("/:comment_id/photo", controller.unattachPhoto);

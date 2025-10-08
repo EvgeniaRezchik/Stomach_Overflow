@@ -31,7 +31,9 @@ const controller = {
             const comment = await new Comment().findOne(req.params.comment_id);
             if (comment.id) {
               if (comment.author_id === req.user.id)
-                res.status(403).json({message: "You cannot react yourself!"});
+                res.status(403).json({
+                  message: "You cannot react to yourself!"
+                });
               else {
                 const query = "SELECT * FROM likes WHERE author_id = "
                               + req.user.id + " AND comment_id = "
@@ -45,6 +47,17 @@ const controller = {
                   like.post_id = null;
                   like.comment_id = comment.id;
                 }
+                if (!req.body.type)
+                  return res.status(400).json({
+                    message: "There is no type of reaction!"
+                  });
+                if (typeof req.body.type !== "string"
+                    || (typeof req.body.type === "string"
+                        && req.body.type.toLowerCase() !== "like"
+                        && req.body.type.toLowerCase() !== "dislike"))
+                  return res.status(400).json({
+                    message: "Invalid type of reaction!"
+                  });
                 like.type = req.body.type;
                 const result2 = await like.save();
                 if (result2 !== null) {
@@ -55,15 +68,16 @@ const controller = {
                       if (author.notifications_on) {
                         const notification = new Notification(author.id,
                                                               req.user.id,
-				                              null,
+                                                              null,
                                                               comment.id,
                                                               "reacted to "
                                                               + "your "
-				                              + "comment:");
+                                                              + "comment:");
                         await notification.save();
                       }
                       res.status(201).json({
-                        message: "The like is successfully created!"
+                        message: "The like is successfully created!",
+                        likeId: result2
                       });
                     } else
                       res.status(500).json({message: "Something went wrong"});
@@ -79,8 +93,7 @@ const controller = {
         } else
           res.status(401).json({message: "Your token seems to have expired"});
       } catch(err) {
-        console.log(err);
-        res.status(401).json({message: "Your token seems to have expired"});
+        res.status(500).json({message: err.message});
       }
     } else
       res.status(401).json({message: "You are not authorized!"});
@@ -96,59 +109,74 @@ const controller = {
             const parentComment = await new Comment()
                                         .findOne(req.params.comment_id);
             if (parentComment.id) {
-              const parentPostId = await parentComment.getParentPost();
-              const parentPost = await new Post().findOne(parentPostId);
-              if (parentPost.id) {
-                if (parentPost.status === "inactive")
-                  res.status(403).json({message: "The post is locked"});
-                else {
-                  if (!req.body.content)
-                    res.status(400).json({
-                      message: "Fill out the content field!"
-                    });
+              if (parentComment.status === "inactive")
+                res.status(403).json({
+                  message: "The parent comment is locked"
+                });
+              else {
+                const parentPostId = await parentComment.getParentPost();
+                const parentPost = await new Post().findOne(parentPostId);
+                if (parentPost.id) {
+                  if (parentPost.status === "inactive")
+                    res.status(403).json({message: "The post is locked"});
                   else {
-                    const comment = new Comment(req.user.id, req.body.content,
-                                                null, parentComment.id, null);
-                    const result = await comment.save();
-                    if (result !== null) {
-                      const author = await new User()
-                                           .findOne(parentComment.author_id);
-                      if (author.id) {
-                        if (author.notifications_on) {
-                          const notification = new Notification(author.id,
-                                                                req.user.id,
-                                                                null,
-				                                comment.id,
-                                                                "commented "
-                                                                + "on you:");
-                          await notification.save();
-                        }
-                      }
-                      const followers = await parentPost.getFollowers();
-                      for (let i of followers) {
-                        if (i.notifications_on && i.id !== author.id) {
-                          const notification = new Notification(i.id,
-                                                                req.user.id,
-                                                                null,
-				                                comment.id,
-                                                                "commented on "
-                                                                + "the post "
-				                                + "you are "
-                                                                + "following:");
-                          await notification.save();
-                        }
-                      }
-                      res.status(201).json({
-                        message: "The comment is successfully created!"
+                    if (!req.body.content)
+                      res.status(400).json({
+                        message: "Fill out the content field!"
                       });
-                    } else
-                      res.status(500).json({message: "Something went wrong"});
+                    else {
+                      const comment = new Comment(req.user.id,
+                                                  req.body.content,
+                                                  null, parentComment.id,
+                                                  null);
+                      const result = await comment.save();
+                      if (result !== null) {
+                        const author = await new User()
+                                       .findOne(parentComment.author_id);
+                        if (author.id) {
+                          if (author.notifications_on
+                              && author.id !== req.user.id) {
+                            const notification = new Notification(author.id,
+                                                                  req.user.id,
+                                                                  null,
+                                                                  comment.id,
+                                                                  "commented "
+                                                                  + "on "
+                                                                  + "you:");
+                            await notification.save();
+                          }
+                        }
+                        const followers = await parentPost.getFollowers();
+                        for (let i of followers) {
+                          if (i.notifications_on && i.id !== author.id) {
+                            const notification = new Notification(i.id,
+                                                                  req.user.id,
+                                                                  null,
+                                                                  comment.id,
+                                                                  "commented "
+                                                                  + "on the "
+                                                                  + "post you"
+                                                                  + " are "
+                                                                  + "follo"
+                                                                  + "wing:");
+                            await notification.save();
+                          }
+                        }
+                        res.status(201).json({
+                          message: "The comment is successfully created!",
+                          commentId: result
+                        });
+                      } else
+                        res.status(500).json({
+                          message: "Something went wrong"
+                        });
+                    }
                   }
-                }
-              } else
-                res.status(404).json({
-		  message: "The parent post is not found"
-		});
+                } else
+                  res.status(404).json({
+                    message: "The parent post is not found"
+                  });
+              }
             } else
               res.status(404).json({message: "The comment is not found"});
           } else
@@ -156,8 +184,7 @@ const controller = {
         } else
           res.status(401).json({message: "Your token seems to have expired"});
       } catch(err) {
-        console.log(err);
-        res.status(401).json({message: "Your token seems to have expired"});
+        res.status(500).json({message: err.message});
       }
     } else
       res.status(401).json({message: "You are not authorized!"});
@@ -170,35 +197,44 @@ const controller = {
         if (payload) {
           req.user = await new User().findOne(payload.id);
           if (req.user.id) {
-            const comment = await new Comment().findOne(req.params.comment_id);
+            const comment = await new Comment()
+                                  .findOne(req.params.comment_id);
             if (comment.id) {
-              const parentPostId = await comment.getParentPost();
-              const parentPost = await new Post().findOne(parentPostId);
-              if (parentPost.id) {
-                if (parentPost.status === "inactive")
-                  res.status(403).json({message: "The parent post is locked"});
-                else {
-                  if (req.user.id === comment.author_id) {
-                    if (req.body.content) {
-                      comment.content = req.body.content;
-                      const result = await comment.save();
-                      if (result !== null)
-                        res.status(200).json({
-                          message: "The comment is successfully edited!"
+              if (comment.status === "inactive")
+                res.status(403).json({message: "The comment is locked"});
+              else {
+                const parentPostId = await comment.getParentPost();
+                const parentPost = await new Post().findOne(parentPostId);
+                if (parentPost.id) {
+                  if (parentPost.status === "inactive")
+                    res.status(403).json({
+                      message: "The parent post is locked"
+                    });
+                  else {
+                    if (req.user.id === comment.author_id) {
+                      if (req.body.content) {
+                        comment.content = req.body.content;
+                        const result = await comment.save();
+                        if (result !== null)
+                          res.status(200).json({
+                            message: "The comment is successfully edited!"
                         });
-                      else
-                        res.status(500).json({
-			  message: "Something went wrong"
-			});
+                        else
+                          res.status(500).json({
+                            message: "Something went wrong"
+                          });
+                      } else
+                        res.status(204).json({message: "No data"});
                     } else
-                      res.status(204).json({message: "No data"});
-                  } else
-                    res.status(403).json({message: "You are not the author!"});
-                }
-              } else
-                res.status(404).json({
-		  message: "The parent post is not found"
-		});
+                      res.status(403).json({
+                        message: "You are not the author!"
+                      });
+                  }
+                } else
+                  res.status(404).json({
+                    message: "The parent post is not found"
+                  });
+              }
             } else
               res.status(404).json({message: "The comment is not found"});
           } else
@@ -206,8 +242,7 @@ const controller = {
         } else
           res.status(401).json({message: "Your token seems to have expired"});
       } catch(err) {
-        console.log(err);
-        res.status(401).json({message: "Your token seems to have expired"});
+        res.status(500).json({message: err.message});
       }
     } else
       res.status(401).json({message: "You are not authorized!"});
@@ -222,36 +257,40 @@ const controller = {
           if (req.user.id) {
             const comment = await new Comment().findOne(req.params.comment_id);
 	        if (comment.id) {
-	          const parentPostId = await comment.getParentPost();
-	          const parentPost = await new Post().findOne(parentPostId);
-	          if (parentPost.id) {
-	            if (parentPost.status === "inactive")
-	              res.status(403).json({
-		        message: "The parent post is locked"
-		      });
-	            else {
-	              if (req.user.id === comment.author_id) {
-	                if (req.file) {
-	                  comment.attachment = "../public/images/"
-	                                       + req.file.filename;
-	                  const result = await comment.save();
-	                  if (result !== null)
-	                    res.status(201).json({src: comment.attachment});
-	                  else
-	                    res.status(500).json({
-			      message: "Something went wrong"
-			    });
-	                } else
-	                  res.status(204).json({message: "No photo"});
-	              } else
-	                res.status(403).json({
-			  message: "You are not the author!"
-			});
-	            }
-	          } else
-	            res.status(404).json({
-		      message: "The parent post is not found"
-		    });
+	          if (comment.status === "inactive")
+                res.status(403).json({message: "The comment is locked"});
+              else {
+                const parentPostId = await comment.getParentPost();
+                const parentPost = await new Post().findOne(parentPostId);
+                if (parentPost.id) {
+                  if (parentPost.status === "inactive")
+                    res.status(403).json({
+                      message: "The parent post is locked"
+                    });
+                  else {
+                    if (req.user.id === comment.author_id) {
+                      if (req.file) {
+                        comment.attachment = "../public/images/"
+                                             + req.file.filename;
+                        const result = await comment.save();
+                        if (result !== null)
+                          res.status(201).json({src: comment.attachment});
+                        else
+                          res.status(500).json({
+                            message: "Something went wrong"
+                          });
+                      } else
+                        res.status(204).json({message: "No photo"});
+                    } else
+                      res.status(403).json({
+                        message: "You are not the author!"
+                      });
+                  }
+                } else
+                  res.status(404).json({
+                    message: "The parent post is not found"
+                  });
+              }
 	        } else
 	          res.status(404).json({message: "The comment is not found"});
 	      } else
@@ -263,8 +302,45 @@ const controller = {
 	        message: "Your token seems to have expired"
 	      });
 	  } catch(err) {
-        console.log(err);
-        res.status(401).json({message: "Your token seems to have expired"});
+        res.status(500).json({message: err.message});
+      }
+    } else
+      res.status(401).json({message: "You are not authorized!"});
+  },
+  async lockComment(req, res) {
+    if (req.headers.authorization) {
+      try {
+        const payload = jwt.verify(req.headers.authorization.split(" ")[1],
+                                   "userKey");
+        if (payload) {
+          req.user = await new User().findOne(payload.id);
+          if (req.user.id) {
+            const comment = await new Comment().findOne(req.params.comment_id);
+            if (comment.id) {
+              if (req.user.id === comment.author_id
+                  || req.user.role === "admin") {
+                if (comment.status === "inactive")
+                  res.status(403).json({message: "The comment is locked"});
+                else {
+                  comment.status = "inactive";
+                  const result = await comment.save();
+                  if (result !== null) {
+                    res.status(200).json({
+                      message: "The comment is successfully locked!"
+                    });
+                  } else
+                    res.status(500).json({message: "Something went wrong"});
+                }
+              } else
+                res.status(403).json({message: "You do not have rights!"});
+            } else
+              res.status(404).json({message: "The comment is not found"});
+          } else
+            res.status(404).json({message: "The session user is not found"});
+        } else
+          res.status(401).json({message: "Your token seems to have expired"});
+      } catch(err) {
+        res.status(500).json({message: err.message});
       }
     } else
       res.status(401).json({message: "You are not authorized!"});
@@ -302,8 +378,7 @@ const controller = {
         } else
           res.status(401).json({message: "Your token seems to have expired"});
       } catch(err) {
-        console.log(err);
-        res.status(401).json({message: "Your token seems to have expired"});
+        res.status(500).json({message: err.message});
       }
     } else
       res.status(401).json({message: "You are not authorized!"});
@@ -325,6 +400,10 @@ const controller = {
               if (result1[0]) {
                 const like = new Like();
                 Object.assign(like, result1[0][0]);
+                if (!like.id)
+                  return res.status(400).json({
+                    message: "You have not reacted to this comment"
+                  });
                 const result2 = await like.delete();
                 if (result2 !== null) {
                   const author = await new User().findOne(comment.author_id);
@@ -348,8 +427,7 @@ const controller = {
         } else
           res.status(401).json({message: "Your token seems to have expired"});
       } catch(err) {
-        console.log(err);
-        res.status(401).json({message: "Your token seems to have expired"});
+        res.status(500).json({message: err.message});
       }
     } else
       res.status(401).json({message: "You are not authorized!"});
@@ -364,26 +442,36 @@ const controller = {
           if (req.user.id) {
             const comment = await new Comment().findOne(req.params.comment_id);
             if (comment.id) {
-              const parentPostId = await comment.getParentPost();
-              const parentPost = await new Post().findOne(parentPostId);
-              if (parentPost.id) {
-                if (parentPost.status === "inactive")
-                  res.status(403).json({message: "The parent post is locked"});
-                else {
-                  if (req.user.id === comment.author_id) {
-                    comment.attachment = null;
-                    const result = await comment.save();
-                    if (result !== null)
-                      res.status(201).json({src: comment.attachment});
-                    else
-                      res.status(500).json({message: "Something went wrong"});
-                  } else
-                    res.status(403).json({message: "You are not the author!"});
-                }
-              } else
-                res.status(404).json({
-		  message: "The parent post is not found"
-		});
+              if (comment.status === "inactive")
+                res.status(403).json({message: "The comment is locked"});
+              else {
+                const parentPostId = await comment.getParentPost();
+                const parentPost = await new Post().findOne(parentPostId);
+                if (parentPost.id) {
+                  if (parentPost.status === "inactive")
+                    res.status(403).json({
+                      message: "The parent post is locked"
+                    });
+                  else {
+                    if (req.user.id === comment.author_id) {
+                      comment.attachment = null;
+                      const result = await comment.save();
+                      if (result !== null)
+                        res.status(200).json({src: comment.attachment});
+                      else
+                        res.status(500).json({
+                          message: "Something went wrong"
+                        });
+                    } else
+                      res.status(403).json({
+                        message: "You are not the author!"
+                      });
+                  }
+                } else
+                  res.status(404).json({
+                    message: "The parent post is not found"
+                  });
+              }
             } else
               res.status(404).json({message: "The comment is not found"});
           } else
@@ -391,8 +479,7 @@ const controller = {
         } else
           res.status(401).json({message: "Your token seems to have expired"});
       } catch(err) {
-        console.log(err);
-        res.status(401).json({message: "Your token seems to have expired"});
+        res.status(500).json({message: err.message});
       }
     } else
       res.status(401).json({message: "You are not authorized!"});

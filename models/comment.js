@@ -8,6 +8,7 @@ module.exports = class Comment extends Model {
     this.id;
     this.author_id = author_id;
     this.publish_date;
+    this.status;
     this.content = content;
     this.post_id = post_id;
     this.comment_id = comment_id;

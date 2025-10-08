@@ -9,15 +9,16 @@ const controller = {
     let params;
     let offset;
     let valuesCount = 0;
-    if (req.query.title)
+    if (req.query.title && !(req.query.title instanceof Array))
       valuesCount += 1;
-    if (req.query.description)
+    if (req.query.description && !(req.query.description instanceof Array))
       valuesCount += 1;
     if (valuesCount === 1) {
-      if (req.query.title) {
+      if (req.query.title && !(req.query.title instanceof Array)) {
         values = req.query.title;
         columns = "title";
-      } else if (req.query.description) {
+      } else if (req.query.description
+                 && !(req.query.description instanceof Array)) {
         values = req.query.description;
         columns = "description";
       }
@@ -26,11 +27,13 @@ const controller = {
       values = [];
       columns = [];
       params = [];
-      if (req.query.title) {
+      if (req.query.title && !(req.query.title instanceof Array)) {
         values.push(req.query.title);
         columns.push("title");
         params.push("LIKE");
-      } else if (req.query.description) {
+      }
+      if (req.query.description
+          && !(req.query.description instanceof Array)) {
         values.push(req.query.description);
         columns.push("description");
         params.push("LIKE");
@@ -87,7 +90,8 @@ const controller = {
                 const result = await category.save();
                 if (result !== null)
                   res.status(201).json({
-                    message: "The category is successfully created!"
+                    message: "The category is successfully created!",
+                    categoryId: result
                   });
                 else
                   res.status(500).json({message: "Something went wrong"});
@@ -99,8 +103,7 @@ const controller = {
         } else
           res.status(401).json({message: "Your token seems to have expired"});
       } catch(err) {
-        console.log(err);
-        res.status(401).json({message: "Your token seems to have expired"});
+        res.status(500).json({message: err.message});
       }
     } else
       res.status(401).json({message: "You are not authorized!"});
@@ -143,8 +146,7 @@ const controller = {
         } else
           res.status(401).json({message: "Your token seems to have expired"});
       } catch(err) {
-        console.log(err);
-        res.status(401).json({message: "Your token seems to have expired"});
+        res.status(500).json({message: err.message});
       }
     } else
       res.status(401).json({message: "You are not authorized!"});
@@ -165,7 +167,14 @@ const controller = {
                   category.title = req.body.title;
                 if (req.body.description)
                   category.description = req.body.description;
-                if (req.body.deleteDescription)
+                if (req.body.deleteDescription !== undefined
+                    && (req.body.deleteDescription === true
+                        || req.body.deleteDescription === 1
+                        || (typeof req.body.deleteDescription === "string"
+                            && (req.body.deleteDescription
+                                        .toLowerCase() === "true"
+                                || req.body.deleteDescription
+                                           .toLowerCase() === "1"))))
                   category.description = null;
                 const result = await category.save();
                 if (result !== null)
@@ -185,8 +194,7 @@ const controller = {
         } else
           res.status(401).json({message: "Your token seems to have expired"});
       } catch(err) {
-        console.log(err);
-        res.status(401).json({message: "Your token seems to have expired"});
+        res.status(500).json({message: err.message});
       }
     } else
       res.status(401).json({message: "You are not authorized!"});
@@ -219,8 +227,7 @@ const controller = {
         } else
           res.status(401).json({message: "Your token seems to have expired"});
       } catch(err) {
-        console.log(err);
-        res.status(401).json({message: "Your token seems to have expired"});
+        res.status(500).json({message: err.message});
       }
     } else
       res.status(401).json({message: "You are not authorized!"});
@@ -265,8 +272,7 @@ const controller = {
         } else
           res.status(401).json({message: "Your token seems to have expired"});
       } catch(err) {
-        console.log(err);
-        res.status(401).json({message: "Your token seems to have expired"});
+        res.status(500).json({message: err.message});
       }
     } else
       res.status(401).json({message: "You are not authorized!"});

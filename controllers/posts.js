@@ -27,11 +27,11 @@ const controller = {
       valuesCounter += 1;
     if (req.query.status)
       valuesCounter += 1;
-    if (req.query.user)
+    if (req.query.user && !(req.query.user instanceof Array))
       valuesCounter += 1;
-    if (req.query.title)
+    if (req.query.title && !(req.query.title instanceof Array))
       valuesCounter += 1;
-    if (req.query.content)
+    if (req.query.content && !(req.query.content instanceof Array))
       valuesCounter += 1;
     if (valuesCounter === 1) {
       if (req.query.date) {
@@ -86,10 +86,7 @@ const controller = {
 	          message: "Your token seems to have expired"
 	        });
 	    } catch(err) {
-	      console.log(err);
-	      return res.status(401).json({
-	        message: "Your token seems to have expired"
-	      });
+	      return res.status(500).json({message: err.message});
 	    }
 	  }
 	} else {
@@ -109,7 +106,7 @@ const controller = {
 	  columns = "posts.status";
 	  params = "=";
 	  values = "active";
-	} else {
+	} else if (req.query.status === "all") {
 	  if (req.headers.authorization) {
 	    try {
 	      const payload = jwt.verify(req.headers.authorization
@@ -145,7 +142,7 @@ const controller = {
 	    values = "active";
 	  }
 	}
-      } else if (req.query.user) {
+      } else if (req.query.user && !(req.query.user instanceof Array)) {
         const user = await new User().findOne(req.query.user, "login");
         if (user.id) {
 	  joinCounter += 1;
@@ -189,11 +186,11 @@ const controller = {
 	  }     
 	} else
           return res.status(404).json({message: "The user is not found"});
-      } else if (req.query.title) {
+      } else if (req.query.title && !(req.query.title instanceof Array)) {
         columns = "posts.title";
         params = "LIKE";
         values = req.query.title;
-      } else if (req.query.content) {
+      } else if (req.query.content && !(req.query.content instanceof Array)) {
         columns = "content";
         params = "LIKE";
         values = req.query.content;
@@ -255,10 +252,7 @@ const controller = {
 	          message: "Your token seems to have expired"
 	        });
 	    } catch(err) {
-	      console.log(err);
-	      return res.status(401).json({
-	        message: "Your token seems to have expired"
-	      });
+	      return res.status(500).json({message: err.message});
 	    }
 	  }
 	} else {
@@ -316,7 +310,7 @@ const controller = {
 	  }
 	}
       }
-      if (req.query.user) {
+      if (req.query.user && !(req.query.user instanceof Array)) {
         const user = await new User().findOne(req.query.user, "login");
         if (user.id) {
 	  joinCounter += 1;
@@ -376,12 +370,12 @@ const controller = {
 	} else
           return res.status(404).json({message: "The user is not found"});
       }
-      if (req.query.title) {
+      if (req.query.title && !(req.query.title instanceof Array)) {
         columns.push("posts.title");
         params.push("LIKE");
         values.push(req.query.title);
       }
-      if (req.query.content) {
+      if (req.query.content && !(req.query.content instanceof Array)) {
         columns.push("content");
         params.push("LIKE");
         values.push(req.query.content);
@@ -396,12 +390,18 @@ const controller = {
       else if (req.query.orderBy === "authorsRating") {
         joinCounter += 1;
         orderBy = "users.rating";
+      } else {
+        joinCounter += 1;
+        orderBy = "ratings.rating";
       }
     } else {
       joinCounter += 1;
       orderBy = "ratings.rating";
     }
-    order = req.query.order ? req.query.order:"DESC";
+    order = req.query.order && !(req.query.order instanceof Array)
+            && (req.query.order.toUpperCase() === "ASC"
+                || req.query.order.toUpperCase() === "DESC") ?
+            req.query.order:"DESC";
     if (joinCounter === 1) {
       if (req.query.category) {
         joinTables = "(SELECT DISTINCT * FROM (SELECT posts.* FROM posts JOIN"
@@ -430,7 +430,8 @@ const controller = {
 		     + " AS max_likes) AS ratings";
         joinColumns1 = "ratings.post_id";
         joinColumns2 = "posts.id";
-      } else if (req.query.user || (orderBy && orderBy === "users.rating")) {
+      } else if ((req.query.user && !(req.query.user instanceof Array))
+                 || (orderBy && orderBy === "users.rating")) {
         joinTables = "users";
         joinColumns1 = "users.id";
         joinColumns2 = "posts.author_id";
@@ -470,7 +471,8 @@ const controller = {
         joinColumns1.push("ratings.post_id");
         joinColumns2.push("posts.id");
       }
-      if (req.query.user || (orderBy && orderBy === "users.rating")) {
+      if ((req.query.user && !(req.query.user instanceof Array))
+          || (orderBy && orderBy === "users.rating")) {
         joinTables.push("users");
         joinColumns1.push("users.id");
         joinColumns2.push("posts.author_id");
@@ -493,40 +495,40 @@ const controller = {
     const posts = await Post.findAll(values, columns, params, orderBy,
 	                             order, limit, offset,
 	                             joinTables, joinColumns1, joinColumns2);
-    res.json({posts: posts});
+    res.status(200).json({posts: posts});
   },
   async getPost(req, res) {
     const post = await new Post().findOne(req.params.post_id);
     if (post.id)
-      res.json({post: post});
+      res.status(200).json({post: post});
     else
       res.status(404).json({message: "The post is not found"});
   },
   async getComments(req, res) {
     const post = await new Post().findOne(req.params.post_id);
     if (post.id)
-      res.json({comments: await post.getAllComments()});
+      res.status(200).json({comments: await post.getAllComments()});
     else
       res.status(404).json({message: "The post is not found"});
   },
   async getCategories(req, res) {
     const post = await new Post().findOne(req.params.post_id);
     if (post.id)
-      res.json({categories: await post.getCategories()});
+      res.status(200).json({categories: await post.getCategories()});
     else
       res.status(404).json({message: "The post is not found"});
   },
   async getLikes(req, res) {
     const post = await new Post().findOne(req.params.post_id);
     if (post.id)
-      res.json({likes: await post.getLikes()});
+      res.status(200).json({likes: await post.getLikes()});
     else
       res.status(404).json({message: "The post is not found"});
   },
   async getFollowers(req, res) {
     const post = await new Post().findOne(req.params.post_id);
     if (post.id)
-      res.json({followers: await post.getFollowers()});
+      res.status(200).json({followers: await post.getFollowers()});
     else
       res.status(404).json({message: "The post is not found"});
   },
@@ -571,7 +573,8 @@ const controller = {
                   }
                 }
                 res.status(201).json({
-                  message: "The post is successfully created!"
+                  message: "The post is successfully created!",
+                  postId: result1
                 });
               } else
                 res.status(500).json({message: "Something went wrong"});
@@ -581,8 +584,7 @@ const controller = {
         } else
           res.status(401).json({message: "Your token seems to have expired"});
       } catch(err) {
-        console.log(err);
-        res.status(401).json({message: "Your token seems to have expired"});
+        res.status(500).json({message: err.message});
       }
     } else
       res.status(401).json({message: "You are not authorized!"});
@@ -601,7 +603,7 @@ const controller = {
                 res.status(403).json({message: "The post is locked"});
               else {
                 if (!req.body.content)
-                  res(400).json({message: "Fill out the content field!"});
+                  res.status(400).json({message: "Fill out the content field!"});
                 else {
                   const comment = new Comment(req.user.id, req.body.content,
                                               post.id, null, null);
@@ -609,7 +611,8 @@ const controller = {
                   if (result !== null) {
                     const author = await new User().findOne(post.author_id);
                     if (author.id) {
-                      if (author.notifications_on) {
+                      if (author.notifications_on
+                          && author.id !== req.user.id) {
                         const notification = new Notification(author.id,
                                                               req.user.id,
                                                               null,
@@ -621,7 +624,7 @@ const controller = {
                     }
                     const followers = await post.getFollowers();
                     for (let i of followers) {
-                      if (i.notifications_on) {
+                      if (i.notifications_on && i.id !== req.user.id) {
                         const notification = new Notification(i.id,
                                                               req.user.id,
                                                               null,
@@ -634,7 +637,8 @@ const controller = {
                       }
                     }
                     res.status(201).json({
-                      message: "The comment is successfully created!"
+                      message: "The comment is successfully created!",
+                      commentId: result
                     });
                   } else
                     res.status(500).json({message: "Something went wrong"});
@@ -647,8 +651,7 @@ const controller = {
         } else
           res.status(401).json({message: "Your token seems to have expired"});
       } catch(err) {
-        console.log(err);
-        res.status(401).json({message: "Your token seems to have expired"});
+        res.status(500).json({message: err.message});
       }
     } else
       res.status(401).json({message: "You are not authorized!"});
@@ -664,7 +667,9 @@ const controller = {
             const post = await new Post().findOne(req.params.post_id);
             if (post.id) {
               if (post.author_id === req.user.id)
-                res.status(403).json({message: "You cannot react yourself!"});
+                res.status(403).json({
+                  message: "You cannot react to yourself!"
+                });
               else {
                 const query = "SELECT * FROM likes WHERE author_id = "
                               + req.user.id + " AND post_id = "
@@ -678,6 +683,17 @@ const controller = {
                   like.post_id = post.id;
                   like.comment_id = null;
                 }
+                if (!req.body.type)
+                  return res.status(400).json({
+                    message: "There is no type of reaction!"
+                  });
+                if (typeof req.body.type !== "string"
+                    || (typeof req.body.type === "string"
+                        && req.body.type.toLowerCase() !== "like"
+                        && req.body.type.toLowerCase() !== "dislike"))
+                  return res.status(400).json({
+                    message: "Invalid type of reaction!"
+                  });
                 like.type = req.body.type;
                 const result2 = await like.save();
                 if (result2 !== null) {
@@ -694,7 +710,8 @@ const controller = {
                         await notification.save();
                       }
                       res.status(201).json({
-                        message: "The like is successfully created!"
+                        message: "The like is successfully created!",
+                        likeId: result2
                       });
                     } else
                       res.status(500).json({message: "Something went wrong"});
@@ -710,8 +727,7 @@ const controller = {
         } else
           res.status(401).json({message: "Your token seems to have expired"});
       } catch(err) {
-        console.log(err);
-        res.status(401).json({message: "Your token seems to have expired"});
+        res.status(500).json({message: err.message});
       }
     } else
       res.status(401).json({message: "You are not authorized!"});
@@ -793,8 +809,7 @@ const controller = {
         } else
           res.status(401).json({message: "Your token seems to have expired"});
       } catch(err) {
-        console.log(err);
-        res.status(401).json({message: "Your token seems to have expired"});
+        res.status(500).json({message: err.message});
       }
     } else
       res.status(401).json({message: "You are not authorized!"});
@@ -836,8 +851,7 @@ const controller = {
         } else
           res.status(401).json({message: "Your token seems to have expired"});
       } catch(err) {
-        console.log(err);
-        res.status(401).json({message: "Your token seems to have expired"});
+        res.status(500).json({message: err.message});
       }
     } else
       res.status(401).json({message: "You are not authorized!"});
@@ -902,8 +916,7 @@ const controller = {
         } else
           res.status(401).json({message: "Your token seems to have expired"});
       } catch(err) {
-        console.log(err);
-        res.status(401).json({message: "Your token seems to have expired"});
+        res.status(500).json({message: err.message});
       }
     } else
       res.status(401).json({message: "You are not authorized!"});
@@ -941,8 +954,7 @@ const controller = {
         } else
           res.status(401).json({message: "Your token seems to have expired"});
       } catch(err) {
-        console.log(err);
-        res.status(401).json({message: "Your token seems to have expired"});
+        res.status(500).json({message: err.message});
       }
     } else
       res.status(401).json({message: "You are not authorized!"});
@@ -957,7 +969,8 @@ const controller = {
           if (req.user.id) {
             const post = await new Post().findOne(req.params.post_id);
             if (post.id) {
-              if (req.user.id = post.author_id || req.user.role === "admin") {
+              if (req.user.id === post.author_id
+                  || req.user.role === "admin") {
                 if (post.status === "inactive")
                   res.status(403).json({message: "The post is locked"});
                 else {
@@ -990,8 +1003,7 @@ const controller = {
         } else
           res.status(401).json({message: "Your token seems to have expired"});
       } catch(err) {
-        console.log(err);
-        res.status(401).json({message: "Your token seems to have expired"});
+        res.status(500).json({message: err.message});
       }
     } else
       res.status(401).json({message: "You are not authorized!"});
@@ -1029,8 +1041,7 @@ const controller = {
         } else
           res.status(401).json({message: "Your token seems to have expired"});
       } catch(err) {
-        console.log(err);
-        res.status(401).json({message: "Your token seems to have expired"});
+        res.status(500).json({message: err.message});
       }
     } else
       res.status(401).json({message: "You are not authorized!"});
@@ -1051,6 +1062,10 @@ const controller = {
               if (result1[0]) {
                 const like = new Like();
                 Object.assign(like, result1[0][0]);
+                if (!like.id)
+                  return res.status(400).json({
+                    message: "You have not reacted to this comment"
+                  });
                 const result2 = await like.delete();
                 if (result2 !== null) {
                   const author = await new User().findOne(post.author_id);
@@ -1077,8 +1092,7 @@ const controller = {
         } else
           res.status(401).json({message: "Your token seems to have expired"});
       } catch(err) {
-        console.log(err);
-        res.status(401).json({message: "Your token seems to have expired"});
+        res.status(500).json({message: err.message});
       }
     } else
       res.status(401).json({message: "You are not authorized!"});
@@ -1113,8 +1127,7 @@ const controller = {
         } else
           res.status(401).json({message: "Your token seems to have expired"});
       } catch(err) {
-        console.log(err);
-        res.status(401).json({message: "Your token seems to have expired"});
+        res.status(500).json({message: err.message});
       }
     } else
       res.status(401).json({message: "You are not authorized!"});
@@ -1155,8 +1168,7 @@ const controller = {
         } else
           res.status(401).json({message: "Your token seems to have expired"});
       } catch(err) {
-        console.log(err);
-        res.status(401).json({message: "Your token seems to have expired"});
+        res.status(500).json({message: err.message});
       }
     } else
       res.status(401).json({message: "You are not authorized!"});
@@ -1200,8 +1212,7 @@ const controller = {
         } else
           res.status(401).json({message: "Your token seems to have expired"});
       } catch(err) {
-        console.log(err);
-        res.status(401).json({message: "Your token seems to have expired"});
+        res.status(500).json({message: err.message});
       }
     } else
       res.status(401).json({message: "You are not authorized!"});

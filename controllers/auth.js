@@ -152,7 +152,7 @@ const controller = {
         if (payload)
           authorized = true;
       } catch(err) {
-        console.log(err);
+        res.status(500).json({message: err.message});
       }
     }
     if (authorized)
@@ -208,7 +208,21 @@ const controller = {
     }
   },
   async logout(req, res) {
-    res.status(200).json({message: "You successfully signed out!"});
+    let authorized = false;
+    if (req.headers.authorization) {
+      try {
+        const payload = jwt.verify(req.headers.authorization.split(" ")[1],
+                                   "userKey");
+        if (payload)
+          authorized = true;
+      } catch(err) {
+        res.status(500).json({message: err.message});
+      }
+    }
+    if (authorized)
+      res.status(200).json({message: "You successfully signed out!"});
+    else
+      res.status(401).json({message: "You are not authorized!"});
   },
   async passwordReset(req, res) {
     if (!req.body.email)
@@ -388,10 +402,7 @@ const controller = {
 	    res.status(404).json({message: "The user is not found"});
 	}
       } catch(err) {
-        console.log(err);
-        res.status(400).json({
-	  message: "Your reset link seems to have expired"
-	});
+        res.status(500).json({message: err.message});
       }
     }
   },
@@ -438,10 +449,7 @@ const controller = {
 	  }
 	}
       } catch(err) {
-        console.log(err);
-        res.status(400).json({
-	  message: "Your verification code seems to have expired"
-	});
+        res.status(500).json({message: err.message});
       }
     }
   }

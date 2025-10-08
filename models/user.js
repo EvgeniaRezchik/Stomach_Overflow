@@ -101,15 +101,19 @@ module.exports = class User extends Model {
     });
   }
   updateRating() {
-    const query1 = "SELECT count(id) AS Likes FROM likes GROUP BY author_id,"
-		  + " type HAVING author_id = " + this.id
-		  + ' AND type = "like";';
+    const query1 = "SELECT count(likes.id) AS Likes FROM likes LEFT JOIN "
+		   + "posts ON posts.id = likes.post_id LEFT JOIN comments ON"
+		   + ' comments.id = likes.comment_id WHERE type = "like" AND'
+		   + " (posts.author_id = " + this.id
+		   + " OR comments.author_id = " + this.id + ");";
     return db.query(query1)
     .then(res1 => {
       const likes = res1[0][0] ? res1[0][0].Likes:0;
-      const query2 = "SELECT count(id) AS Dislikes FROM likes GROUP BY "
-		     + "author_id, type HAVING author_id = " + this.id
-		     + ' AND type = "dislike";';
+      const query2 = "SELECT count(likes.id) AS Dislikes FROM likes LEFT JOIN"
+		     + " posts ON posts.id = likes.post_id LEFT JOIN comments "
+		     + "ON comments.id = likes.comment_id WHERE type = "
+		     + '"dislike" AND (posts.author_id = ' + this.id
+		     + " OR comments.author_id = " + this.id + ");";
       return db.query(query2)
       .then(res2 => {
         const dislikes = res2[0][0] ? res2[0][0].Dislikes:0;

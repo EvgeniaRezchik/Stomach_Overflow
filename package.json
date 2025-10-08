@@ -1,14 +1,14 @@
 {
-  "name": "yrezchyk-6100",
+  "name": "yrezchyk-6268",
   "version": "1.0.0",
-  "description": "Usof",
+  "description": "Usof backend",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
     "type": "git",
-    "url": "ssh://git@git.green-lms.app:22022/challenge-370/yrezchyk-6100.git"
+    "url": "ssh://git@git.green-lms.app:22022/challenge-370/yrezchyk-6268.git"
   },
   "author": "yrezchyk",
   "license": "ISC",

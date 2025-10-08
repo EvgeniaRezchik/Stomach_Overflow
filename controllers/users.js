@@ -26,15 +26,16 @@ const controller = {
     let params;
     let offset;
     let valuesCount = 0;
-    if (req.query.login)
+    if (req.query.login && !(req.query.login instanceof Array))
       valuesCount += 1;
-    if (req.query.fullName)
+    if (req.query.fullName && !(req.query.fullName instanceof Array))
       valuesCount += 1;
     if (valuesCount === 1) {
-      if (req.query.login) {
+      if (req.query.login && !(req.query.login instanceof Array)) {
         values = req.query.login;
         columns = "login";
-      } else if (req.query.fullName) {
+      } else if (req.query.fullName
+                 && !(req.query.fullName instanceof Array)) {
         values = req.query.fullName;
         columns = "full_name";
       }
@@ -43,11 +44,12 @@ const controller = {
       values = [];
       columns = [];
       params = [];
-      if (req.query.login) {
+      if (req.query.login && !(req.query.login instanceof Array)) {
         values.push(req.query.login);
         columns.push("login");
         params.push("LIKE");
-      } else if (req.query.fullName) {
+      }
+      if (req.query.fullName && !(req.query.fullName instanceof Array)) {
         values.push(req.query.fullName);
         columns.push("full_name");
         params.push("LIKE");
@@ -74,7 +76,7 @@ const controller = {
     if (user.id)
       res.status(200).json({user: user});
     else
-      res.status(404).json({message: "Theser is not found"});
+      res.status(404).json({message: "The user is not found"});
   },
   async getFollowers(req, res) {
     const user = await new User().findOne(req.params.user_id);
@@ -111,8 +113,7 @@ const controller = {
         } else
           res.status(401).json({message: "Your token seems to have expired"});
       } catch(err) {
-        console.log(err);
-        res.status(401).json({message: "Your token seems to have expired"});
+        res.status(500).json({message: err.message});
       }
     } else
       res.status(401).json({message: "You are not authorized!"});
@@ -133,8 +134,7 @@ const controller = {
         } else
           res.status(401).json({message: "Your token seems to have expired"});
       } catch(err) {
-        console.log(err);
-        res.status(401).json({message: "Your token seems to have expired"});
+        res.status(500).json({message: err.message});
       }
     } else
       res.status(401).json({message: "You are not authorized!"});
@@ -218,7 +218,8 @@ const controller = {
                       const result = await user.save();
                       if (result !== null)
                         res.status(201).json({
-                          message: "The user is successfully created!"
+                          message: "The user is successfully created!",
+                          userId: result
                         });
                       else
                         res.status(500).json({
@@ -235,8 +236,7 @@ const controller = {
         } else
           res.status(401).json({message: "Your token seems to have expired"});
       } catch(err) {
-        console.log(err);
-        res.status(401).json({message: "Your token seems to have expired"});
+        res.status(500).json({message: err.message});
       }
     } else
       res.status(401).json({message: "You are not authorized!"});
@@ -298,8 +298,7 @@ const controller = {
         } else
           res.status(401).json({message: "Your token seems to have expired"});
       } catch(err) {
-        console.log(err);
-        res.status(401).json({message: "Your token seems to have expired"});
+        res.status(500).json({message: err.message});
       }
     } else
       res.status(401).json({message: "You are not authorized!"});
@@ -328,8 +327,7 @@ const controller = {
         } else
           res.status(401).json({message: "Your token seems to have expired"});
       } catch(err) {
-        console.log(err);
-        res.status(401).json({message: "Your token seems to have expired"});
+        res.status(500).json({message: err.message});
       }
     } else
       res.status(401).json({message: "You are not authorized!"});
@@ -355,8 +353,16 @@ const controller = {
                     return res.status(400).json({
                       message: "The login must contain up to 30 characters!"
                     });
-                  else
-                    user.login = req.body.login;
+                  else {
+                    const existent = await new User().findOne(req.body.login,
+                                                              "login");
+                    if (existent.login && existent.id !== user.id)
+                      return res.status(400).json({
+                        message: "This login is already used!"
+                      });
+                    else
+                      user.login = req.body.login;
+                  }
                 }
                 if (req.body.fullName) {
                   if (req.body.fullName.length > 30)
@@ -378,8 +384,16 @@ const controller = {
                                + " up to 255 characters!"
                     });
                   else {
-                    user.email_address = req.body.email;
-                    user.email_confirmed = false;
+                    const existent = await new User().findOne(req.body.email,
+                                                              "email_address");
+                    if (existent.id && existent.id !== user.id)
+                      return res.status(400).json({
+                        message: "This e-mail address is already used!"
+                      });
+                    else {
+                      user.email_address = req.body.email;
+                      user.email_confirmed = false;
+                    }
                   }
                 }
                 if (req.body.pass && req.body.repass) {
@@ -418,8 +432,28 @@ const controller = {
                       message: "You do not have admin rights!"
                     });
                 }
-                if (req.body.notificationsOn !== undefined)
-                  user.notifications_on = req.body.notificationsOn;
+                if (req.body.notificationsOn !== undefined
+                    && (typeof req.body.notificationsOn === "boolean"
+                        || (typeof req.body.notificationsOn === "number"
+                            && (req.body.notificationsOn === 1
+                            || req.body.notificationsOn === 0))
+                        || (typeof req.body.notificationsOn === "string"
+                            && (req.body.notificationsOn
+                                        .toLowerCase() === "true"
+                                || req.body.notificationsOn
+                                           .toLowerCase() === "1"
+                                || req.body.notificationsOn
+                                           .toLowerCase() === "false"
+                                || req.body.notificationsOn
+                                           .toLowerCase() === "0"))))
+                  user.notifications_on = req.body.notificationsOn === true
+                                          || req.body.notificationsOn === 1
+                                          || (typeof req.body.notificationsOn === "string"
+                                              && (req.body.notificationsOn
+                                                    .toLowerCase() === "true"
+                                                  || req.body.notificationsOn
+                                                        .toLowerCase() === "1")) ?
+                                          true:false;
                 const result = await user.save();
                 if (result !== null) {
                   if (req.body.email) {
@@ -504,8 +538,7 @@ const controller = {
         } else
           res.status(401).json({message: "Your token seems to have expired"});
       } catch(err) {
-        console.log(err);
-        res.status(401).json({message: "Your token seems to have expired"});
+        res.status(500).json({message: err.message});
       }
     } else
       res.status(401).json({message: "You are not authorized!"});
@@ -529,8 +562,7 @@ const controller = {
         } else
           res.status(401).json({message: "Your token seems to have expired"});
       } catch(err) {
-        console.log(err);
-        res.status(401).json({message: "Your token seems to have expired"});
+        res.status(500).json({message: err.message});
       }
     } else
       res.status(401).json({message: "You are not authorized!"});
@@ -562,8 +594,7 @@ const controller = {
         } else
           res.status(401).json({message: "Your token seems to have expired"});
       } catch(err) {
-        console.log(err);
-        res.status(401).json({message: "Your token seems to have expired"});
+        res.status(500).json({message: err.message});
       }
     } else
       res.status(401).json({message: "You are not authorized!"});
@@ -610,8 +641,7 @@ const controller = {
         } else
           res.status(401).json({message: "Your token seems to have expired"});
       } catch(err) {
-        console.log(err);
-        res.status(401).json({message: "Your token seems to have expired"});
+        res.status(500).json({message: err.message});
       }
     } else
       res.status(401).json({message: "You are not authorized!"});

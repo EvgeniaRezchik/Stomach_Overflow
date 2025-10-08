@@ -44,6 +44,7 @@ node index.js
 ```
 2. Copy the link from the terminal.
 3. Paste the link in Postman (because there is no frontend yet).
+**Note**: you can reset a password of some existent user and then change it before signing in as this user or sign in immediately by the password "l23456789O".
 ## Documentation for the project:
 For the information about the usage of the app read the [Official Stomach Overflow Documentation](https://docs.google.com/document/d/1VTtelaNjCpbmt7tRmX8bE_2_yzD21DtBtSzT29xfu8s/edit?usp=sharing).
 ## P.S.
