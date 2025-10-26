@@ -1,7 +1,7 @@
 # Innovation Campus USOF
 ## About the app
 This is the project created during the education in NTU "KhPI" according to the Innovation Campus program. USOF is a forum where you can publish posts and comment them (my forum is called **Stomach Overflow** and users of my app can discuss everything about cooking).
-## Screenshot of the app in use
+## Screenshots of the app in use
 ### The main page
 ![Main page](./public/images/main.png "Main page")
 ### Signing up
